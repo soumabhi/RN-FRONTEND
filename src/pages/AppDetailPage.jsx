@@ -16,8 +16,13 @@ export default function AppDetailPage() {
     const [version, setVersion] = useState('');
     const [platform, setPlatform] = useState('android');
     const [rolloutVal, setRolloutVal] = useState(100);
+    const [segment, setSegment] = useState('all');
+    const [minVersion, setMinVersion] = useState('');
+    const [maxVersion, setMaxVersion] = useState('');
+    const [countries, setCountries] = useState('');
     const [showApiKey, setShowApiKey] = useState(false);
     const [uploading, setUploading] = useState(false);
+    const [showAdvanced, setShowAdvanced] = useState(false);
 
     useEffect(() => {
         fetchApp(id);
@@ -40,6 +45,10 @@ export default function AppDetailPage() {
         form.append('version', version);
         form.append('platform', platform);
         form.append('rollout', rolloutVal);
+        form.append('segment', segment);
+        if (minVersion) form.append('minVersion', minVersion);
+        if (maxVersion) form.append('maxVersion', maxVersion);
+        if (countries) form.append('countries', countries.split(',').map(c => c.trim()).join(','));
 
         const result = await uploadVersion(form);
         setUploading(false);
@@ -47,6 +56,12 @@ export default function AppDetailPage() {
         if (result) {
             setFile(null);
             setVersion('');
+            setMinVersion('');
+            setMaxVersion('');
+            setCountries('');
+            setSegment('all');
+            setRolloutVal(100);
+            setShowAdvanced(false);
             fetchVersions(currentApp.appId);
         }
     };
@@ -168,6 +183,76 @@ export default function AppDetailPage() {
                         />
                     </div>
 
+                    {/* Advanced targeting */}
+                    <div className="md:col-span-2">
+                        <button
+                            type="button"
+                            onClick={() => setShowAdvanced(!showAdvanced)}
+                            className="text-sm text-indigo-600 hover:underline"
+                        >
+                            {showAdvanced ? '▾ Hide' : '▸ Show'} Advanced Targeting
+                        </button>
+                    </div>
+
+                    {showAdvanced && (
+                        <>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Segment</label>
+                                <select
+                                    value={segment}
+                                    onChange={(e) => setSegment(e.target.value)}
+                                    className="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500"
+                                >
+                                    <option value="all">All users</option>
+                                    <option value="beta_testers">Beta testers</option>
+                                    <option value="canary">Canary</option>
+                                    <option value="enterprise">Enterprise</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Countries <span className="font-normal text-gray-400">(comma-separated, e.g. IN,US)</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={countries}
+                                    onChange={(e) => setCountries(e.target.value)}
+                                    className="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500"
+                                    placeholder="IN,US,GB  (blank = all countries)"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Min Client Version <span className="font-normal text-gray-400">(optional)</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={minVersion}
+                                    pattern="(\d+\.\d+\.\d+)?"
+                                    onChange={(e) => setMinVersion(e.target.value)}
+                                    className="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500"
+                                    placeholder="1.0.0"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Max Client Version <span className="font-normal text-gray-400">(optional)</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={maxVersion}
+                                    pattern="(\d+\.\d+\.\d+)?"
+                                    onChange={(e) => setMaxVersion(e.target.value)}
+                                    className="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500"
+                                    placeholder="1.9.9"
+                                />
+                            </div>
+                        </>
+                    )}
+
                     <div className="md:col-span-2">
                         <button
                             type="submit"
@@ -203,6 +288,8 @@ export default function AppDetailPage() {
                                     <th className="p-4 font-medium">Version</th>
                                     <th className="p-4 font-medium">Platform</th>
                                     <th className="p-4 font-medium">Rollout</th>
+                                    <th className="p-4 font-medium">Segment</th>
+                                    <th className="p-4 font-medium">Targeting</th>
                                     <th className="p-4 font-medium">Status</th>
                                     <th className="p-4 font-medium">Size</th>
                                     <th className="p-4 font-medium">Created</th>
@@ -215,6 +302,25 @@ export default function AppDetailPage() {
                                         <td className="p-4 font-mono font-medium">v{v.version}</td>
                                         <td className="p-4 text-sm capitalize">{v.platform}</td>
                                         <td className="p-4 text-sm">{v.rollout}%</td>
+                                        <td className="p-4">
+                                            {v.segment && v.segment !== 'all' ? (
+                                                <span className="text-xs px-2 py-1 rounded-full font-medium bg-purple-50 text-purple-700">
+                                                    {v.segment}
+                                                </span>
+                                            ) : (
+                                                <span className="text-xs text-gray-400">all</span>
+                                            )}
+                                        </td>
+                                        <td className="p-4 text-xs text-gray-500 space-y-0.5">
+                                            {v.minVersion && <div>min: {v.minVersion}</div>}
+                                            {v.maxVersion && <div>max: {v.maxVersion}</div>}
+                                            {v.countries?.length > 0 && (
+                                                <div>{v.countries.join(', ')}</div>
+                                            )}
+                                            {!v.minVersion && !v.maxVersion && !v.countries?.length && (
+                                                <span className="text-gray-300">—</span>
+                                            )}
+                                        </td>
                                         <td className="p-4">
                                             <span
                                                 className={`text-xs px-2 py-1 rounded-full font-medium ${v.isActive
