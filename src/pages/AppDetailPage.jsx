@@ -1,6 +1,25 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import useAppStore from '../store/appStore';
+
+function SectionCard({ title, subtitle, action, children, style }) {
+    return (
+        <div className="card" style={{ overflow: 'hidden', ...style }}>
+            <div style={{
+                padding: '16px 24px',
+                borderBottom: '1px solid var(--border)',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            }}>
+                <div>
+                    <h2 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)' }}>{title}</h2>
+                    {subtitle && <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{subtitle}</p>}
+                </div>
+                {action}
+            </div>
+            {children}
+        </div>
+    );
+}
 
 export default function AppDetailPage() {
     const { id } = useParams();
@@ -23,6 +42,7 @@ export default function AppDetailPage() {
     const [showApiKey, setShowApiKey] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [showAdvanced, setShowAdvanced] = useState(false);
+    const [copiedKey, setCopiedKey] = useState(false);
 
     useEffect(() => {
         fetchApp(id);
@@ -78,44 +98,106 @@ export default function AppDetailPage() {
         await updateRollout(vId, newRollout);
     };
 
+    const copyApiKey = () => {
+        if (currentApp?.apiKey) {
+            navigator.clipboard.writeText(currentApp.apiKey);
+            setCopiedKey(true);
+            setTimeout(() => setCopiedKey(false), 2000);
+        }
+    };
+
     if (!currentApp && loading) {
-        return <div className="text-center text-gray-400 py-12">Loading...</div>;
+        return (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: 'var(--text-3)', fontSize: 13 }}>
+                Loading app details...
+            </div>
+        );
     }
 
     if (!currentApp) {
-        return <div className="text-center text-gray-400 py-12">App not found</div>;
+        return (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, color: 'var(--text-3)', fontSize: 13 }}>
+                App not found.
+            </div>
+        );
     }
 
     return (
         <div>
-            <button onClick={() => navigate('/apps')} className="text-sm text-gray-500 hover:text-gray-700 mb-4">
-                ← Back to Apps
+            {/* Back */}
+            <button
+                onClick={() => navigate('/apps')}
+                style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    fontSize: 13, color: 'var(--text-3)', background: 'none', border: 'none',
+                    cursor: 'pointer', padding: '0 0 18px', fontFamily: 'var(--font-sans)',
+                    transition: 'color .15s',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-1)'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-3)'}
+            >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="15 18 9 12 15 6" />
+                </svg>
+                Back to Apps
             </button>
 
             {/* App info */}
-            <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
-                <h1 className="text-2xl font-bold mb-2">{currentApp.name}</h1>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                    <div>
-                        <span className="text-gray-500">App ID:</span>{' '}
-                        <code className="bg-gray-100 px-2 py-0.5 rounded font-mono">{currentApp.appId}</code>
+            <div className="card" style={{ padding: '20px 24px', marginBottom: 20 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+                    <div style={{
+                        width: 44, height: 44, borderRadius: 11,
+                        background: `hsl(${(currentApp.name.charCodeAt(0) * 37) % 360}, 65%, 92%)`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 18, fontWeight: 700, flexShrink: 0,
+                        color: `hsl(${(currentApp.name.charCodeAt(0) * 37) % 360}, 55%, 38%)`,
+                    }}>
+                        {currentApp.name.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                        <span className="text-gray-500">Platforms:</span>{' '}
-                        {currentApp.platforms?.map((p) => (
-                            <span key={p} className="inline-block bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-xs ml-1 capitalize">
-                                {p}
-                            </span>
-                        ))}
+                        <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-1)', letterSpacing: '-0.02em' }}>
+                            {currentApp.name}
+                        </h1>
+                        <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>App configuration & deployment</p>
                     </div>
-                    <div>
-                        <span className="text-gray-500">API Key:</span>{' '}
-                        <button onClick={() => setShowApiKey(!showApiKey)} className="text-indigo-600 text-xs hover:underline ml-1">
-                            {showApiKey ? 'Hide' : 'Show'}
-                        </button>
-                        {showApiKey && (
-                            <code className="block mt-1 bg-gray-100 p-2 rounded text-xs break-all font-mono">
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+                    <div style={{ background: 'var(--bg-subtle)', borderRadius: 'var(--radius)', padding: '12px 14px' }}>
+                        <p style={{ fontSize: 10, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: 6 }}>App ID</p>
+                        <code style={{ fontFamily: 'var(--font-mono)', fontSize: 12.5, color: 'var(--text-1)', fontWeight: 500 }}>
+                            {currentApp.appId}
+                        </code>
+                    </div>
+                    <div style={{ background: 'var(--bg-subtle)', borderRadius: 'var(--radius)', padding: '12px 14px' }}>
+                        <p style={{ fontSize: 10, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: 6 }}>Platforms</p>
+                        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                            {currentApp.platforms?.map((p) => (
+                                <span key={p} className="badge badge-blue" style={{ textTransform: 'capitalize' }}>{p}</span>
+                            ))}
+                        </div>
+                    </div>
+                    <div style={{ background: 'var(--bg-subtle)', borderRadius: 'var(--radius)', padding: '12px 14px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                            <p style={{ fontSize: 10, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--text-3)' }}>API Key</p>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                <button onClick={() => setShowApiKey(!showApiKey)} style={{ fontSize: 11, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'var(--font-sans)', fontWeight: 500 }}>
+                                    {showApiKey ? 'Hide' : 'Reveal'}
+                                </button>
+                                {showApiKey && (
+                                    <button onClick={copyApiKey} style={{ fontSize: 11, color: copiedKey ? 'var(--success)' : 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'var(--font-sans)', fontWeight: 500, transition: 'color .15s' }}>
+                                        {copiedKey ? 'Copied!' : 'Copy'}
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                        {showApiKey ? (
+                            <code style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-2)', wordBreak: 'break-all', display: 'block' }}>
                                 {currentApp.apiKey}
+                            </code>
+                        ) : (
+                            <code style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-3)' }}>
+                                {currentApp.apiKey?.slice(0, 16)}••••••••
                             </code>
                         )}
                     </div>
@@ -123,226 +205,259 @@ export default function AppDetailPage() {
             </div>
 
             {error && (
-                <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg mb-4 cursor-pointer" onClick={clearError}>
+                <div onClick={clearError} style={{
+                    background: 'var(--error-bg)', border: '1px solid #FECACA',
+                    color: 'var(--error)', borderRadius: 'var(--radius)',
+                    padding: '10px 14px', fontSize: 13, marginBottom: 16, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 8,
+                }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
                     {error}
                 </div>
             )}
 
             {/* Upload form */}
-            <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
-                <h2 className="text-lg font-semibold mb-4">Upload New Bundle</h2>
-                <form onSubmit={handleUpload} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Bundle File</label>
-                        <input
-                            type="file"
-                            accept=".js,.bundle"
-                            onChange={(e) => setFile(e.target.files[0])}
-                            className="w-full border rounded-lg px-3 py-2 text-sm"
-                            required
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Version</label>
-                        <input
-                            type="text"
-                            required
-                            pattern="\d+\.\d+\.\d+"
-                            value={version}
-                            onChange={(e) => setVersion(e.target.value)}
-                            className="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500"
-                            placeholder="1.0.2"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Platform</label>
-                        <select
-                            value={platform}
-                            onChange={(e) => setPlatform(e.target.value)}
-                            className="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500"
-                        >
-                            {currentApp.platforms?.map((p) => (
-                                <option key={p} value={p}>{p}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Rollout: {rolloutVal}%
-                        </label>
-                        <input
-                            type="range"
-                            min="0"
-                            max="100"
-                            value={rolloutVal}
-                            onChange={(e) => setRolloutVal(Number(e.target.value))}
-                            className="w-full mt-2"
-                        />
-                    </div>
-
-                    {/* Advanced targeting */}
-                    <div className="md:col-span-2">
-                        <button
-                            type="button"
-                            onClick={() => setShowAdvanced(!showAdvanced)}
-                            className="text-sm text-indigo-600 hover:underline"
-                        >
-                            {showAdvanced ? '▾ Hide' : '▸ Show'} Advanced Targeting
-                        </button>
-                    </div>
-
-                    {showAdvanced && (
-                        <>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Segment</label>
-                                <select
-                                    value={segment}
-                                    onChange={(e) => setSegment(e.target.value)}
-                                    className="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500"
-                                >
-                                    <option value="all">All users</option>
-                                    <option value="beta_testers">Beta testers</option>
-                                    <option value="canary">Canary</option>
-                                    <option value="enterprise">Enterprise</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Countries <span className="font-normal text-gray-400">(comma-separated, e.g. IN,US)</span>
-                                </label>
+            <SectionCard title="Upload New Bundle" subtitle="Deploy a new OTA bundle to your users" style={{ marginBottom: 20 }}>
+                <div style={{ padding: '20px 24px' }}>
+                    <form onSubmit={handleUpload} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                        <div>
+                            <label style={{ display: 'block', fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)', marginBottom: 6 }}>
+                                Bundle File <span style={{ color: 'var(--error)' }}>*</span>
+                            </label>
+                            <div style={{
+                                border: '1.5px dashed var(--border-strong)', borderRadius: 'var(--radius)',
+                                padding: '14px', background: file ? 'var(--accent-light)' : 'var(--bg-subtle)', cursor: 'pointer',
+                            }}>
                                 <input
-                                    type="text"
-                                    value={countries}
-                                    onChange={(e) => setCountries(e.target.value)}
-                                    className="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500"
-                                    placeholder="IN,US,GB  (blank = all countries)"
+                                    type="file"
+                                    accept=".js,.bundle"
+                                    onChange={(e) => setFile(e.target.files[0])}
+                                    required
+                                    style={{ width: '100%', fontSize: 12.5, color: 'var(--text-2)', cursor: 'pointer' }}
                                 />
+                                {file && <p style={{ fontSize: 11.5, color: 'var(--accent)', marginTop: 5 }}>{file.name} ({(file.size / 1024).toFixed(0)} KB)</p>}
                             </div>
+                        </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Min Client Version <span className="font-normal text-gray-400">(optional)</span>
-                                </label>
+                        <div>
+                            <label style={{ display: 'block', fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)', marginBottom: 6 }}>
+                                Version <span style={{ color: 'var(--error)' }}>*</span>
+                            </label>
+                            <input
+                                type="text"
+                                required
+                                pattern="\d+\.\d+\.\d+"
+                                value={version}
+                                onChange={(e) => setVersion(e.target.value)}
+                                className="input"
+                                style={{ fontFamily: 'var(--font-mono)' }}
+                                placeholder="1.0.2"
+                            />
+                            <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>Format: major.minor.patch</p>
+                        </div>
+
+                        <div>
+                            <label style={{ display: 'block', fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)', marginBottom: 6 }}>Platform</label>
+                            <select value={platform} onChange={(e) => setPlatform(e.target.value)} className="input">
+                                {currentApp.platforms?.map((p) => (
+                                    <option key={p} value={p}>{p}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label style={{ display: 'block', fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)', marginBottom: 6 }}>
+                                Rollout: <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{rolloutVal}%</span>
+                            </label>
+                            <div style={{ paddingTop: 4 }}>
                                 <input
-                                    type="text"
-                                    value={minVersion}
-                                    pattern="(\d+\.\d+\.\d+)?"
-                                    onChange={(e) => setMinVersion(e.target.value)}
-                                    className="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500"
-                                    placeholder="1.0.0"
+                                    type="range" min="0" max="100" value={rolloutVal}
+                                    onChange={(e) => setRolloutVal(Number(e.target.value))}
+                                    style={{ width: '100%', accentColor: 'var(--accent)' }}
                                 />
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
+                                    <span>0%</span><span>50%</span><span>100%</span>
+                                </div>
                             </div>
+                        </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Max Client Version <span className="font-normal text-gray-400">(optional)</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    value={maxVersion}
-                                    pattern="(\d+\.\d+\.\d+)?"
-                                    onChange={(e) => setMaxVersion(e.target.value)}
-                                    className="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500"
-                                    placeholder="1.9.9"
-                                />
-                            </div>
-                        </>
-                    )}
+                        <div style={{ gridColumn: '1 / -1' }}>
+                            <button
+                                type="button"
+                                onClick={() => setShowAdvanced(!showAdvanced)}
+                                style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                                    fontSize: 13, color: 'var(--accent)', background: 'none', border: 'none',
+                                    cursor: 'pointer', padding: 0, fontFamily: 'var(--font-sans)', fontWeight: 500,
+                                }}
+                            >
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                                    style={{ transform: showAdvanced ? 'rotate(90deg)' : 'none', transition: 'transform .2s' }}>
+                                    <polyline points="9 18 15 12 9 6" />
+                                </svg>
+                                Advanced Targeting
+                            </button>
+                        </div>
 
-                    <div className="md:col-span-2">
-                        <button
-                            type="submit"
-                            disabled={uploading}
-                            className="bg-indigo-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-                        >
-                            {uploading ? 'Uploading...' : 'Upload Bundle'}
-                        </button>
-                    </div>
-                </form>
-            </div>
+                        {showAdvanced && (
+                            <>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)', marginBottom: 6 }}>Segment</label>
+                                    <select value={segment} onChange={(e) => setSegment(e.target.value)} className="input">
+                                        <option value="all">All users</option>
+                                        <option value="beta_testers">Beta testers</option>
+                                        <option value="canary">Canary</option>
+                                        <option value="enterprise">Enterprise</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)', marginBottom: 6 }}>
+                                        Countries <span style={{ fontWeight: 400, color: 'var(--text-3)', fontSize: 11.5 }}>(e.g. IN,US,GB)</span>
+                                    </label>
+                                    <input type="text" value={countries} onChange={(e) => setCountries(e.target.value)} className="input" style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }} placeholder="IN,US,GB  (blank = all)" />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)', marginBottom: 6 }}>
+                                        Min Client Version <span style={{ fontWeight: 400, color: 'var(--text-3)', fontSize: 11.5 }}>(optional)</span>
+                                    </label>
+                                    <input type="text" value={minVersion} pattern="(\d+\.\d+\.\d+)?" onChange={(e) => setMinVersion(e.target.value)} className="input" style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }} placeholder="1.0.0" />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: 12.5, fontWeight: 500, color: 'var(--text-2)', marginBottom: 6 }}>
+                                        Max Client Version <span style={{ fontWeight: 400, color: 'var(--text-3)', fontSize: 11.5 }}>(optional)</span>
+                                    </label>
+                                    <input type="text" value={maxVersion} pattern="(\d+\.\d+\.\d+)?" onChange={(e) => setMaxVersion(e.target.value)} className="input" style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }} placeholder="1.9.9" />
+                                </div>
+                            </>
+                        )}
+
+                        <div style={{ gridColumn: '1 / -1' }}>
+                            <button type="submit" disabled={uploading} className="btn btn-primary">
+                                {uploading ? (
+                                    <>
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}>
+                                            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                                        </svg>
+                                        Uploading...
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <polyline points="16 16 12 12 8 16" /><line x1="12" y1="12" x2="12" y2="21" />
+                                            <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
+                                        </svg>
+                                        Upload Bundle
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </SectionCard>
 
             {/* Versions table */}
-            <div className="bg-white rounded-xl shadow-sm border">
-                <div className="p-6 border-b flex items-center justify-between">
-                    <h2 className="text-lg font-semibold">Versions</h2>
+            <SectionCard
+                title="Versions"
+                subtitle={`${versions.length} bundle${versions.length !== 1 ? 's' : ''} deployed`}
+                action={
                     <button
                         onClick={handleRollback}
                         disabled={versions.length < 2}
-                        className="text-sm bg-red-50 text-red-600 px-4 py-1.5 rounded-lg hover:bg-red-100 disabled:opacity-30 transition-colors"
+                        className="btn btn-ghost btn-sm"
+                        style={{ color: versions.length >= 2 ? 'var(--error)' : undefined, borderColor: versions.length >= 2 ? '#FECACA' : undefined }}
                     >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 .49-3.46" />
+                        </svg>
                         Rollback
                     </button>
-                </div>
-
+                }
+            >
                 {versions.length === 0 ? (
-                    <div className="p-6 text-center text-gray-400">No versions uploaded yet.</div>
+                    <div style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>
+                        No versions uploaded yet. Upload your first bundle above.
+                    </div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
+                    <div style={{ overflowX: 'auto' }}>
+                        <table className="data-table">
                             <thead>
-                                <tr className="bg-gray-50 text-left text-sm text-gray-500">
-                                    <th className="p-4 font-medium">Version</th>
-                                    <th className="p-4 font-medium">Platform</th>
-                                    <th className="p-4 font-medium">Rollout</th>
-                                    <th className="p-4 font-medium">Segment</th>
-                                    <th className="p-4 font-medium">Targeting</th>
-                                    <th className="p-4 font-medium">Status</th>
-                                    <th className="p-4 font-medium">Size</th>
-                                    <th className="p-4 font-medium">Created</th>
-                                    <th className="p-4 font-medium">Actions</th>
+                                <tr>
+                                    <th>Version</th>
+                                    <th>Platform</th>
+                                    <th>Rollout</th>
+                                    <th>Segment</th>
+                                    <th>Targeting</th>
+                                    <th>Status</th>
+                                    <th>Size</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y">
+                            <tbody>
                                 {versions.map((v) => (
-                                    <tr key={v._id} className="hover:bg-gray-50">
-                                        <td className="p-4 font-mono font-medium">v{v.version}</td>
-                                        <td className="p-4 text-sm capitalize">{v.platform}</td>
-                                        <td className="p-4 text-sm">{v.rollout}%</td>
-                                        <td className="p-4">
+                                    <tr key={v._id}>
+                                        <td>
+                                            <code style={{ fontFamily: 'var(--font-mono)', fontSize: 12.5, fontWeight: 600, color: 'var(--text-1)' }}>
+                                                v{v.version}
+                                            </code>
+                                        </td>
+                                        <td style={{ textTransform: 'capitalize' }}>{v.platform}</td>
+                                        <td>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                <div style={{ width: 48, height: 4, borderRadius: 99, background: 'var(--bg-muted)', overflow: 'hidden' }}>
+                                                    <div style={{
+                                                        width: `${v.rollout}%`, height: '100%',
+                                                        background: v.rollout === 100 ? 'var(--success)' : 'var(--accent)',
+                                                        borderRadius: 99,
+                                                    }} />
+                                                </div>
+                                                <span style={{ fontSize: 12.5, color: 'var(--text-2)', fontWeight: 500 }}>{v.rollout}%</span>
+                                            </div>
+                                        </td>
+                                        <td>
                                             {v.segment && v.segment !== 'all' ? (
-                                                <span className="text-xs px-2 py-1 rounded-full font-medium bg-purple-50 text-purple-700">
-                                                    {v.segment}
-                                                </span>
+                                                <span className="badge badge-purple" style={{ textTransform: 'capitalize' }}>{v.segment}</span>
                                             ) : (
-                                                <span className="text-xs text-gray-400">all</span>
+                                                <span style={{ fontSize: 12, color: 'var(--text-3)' }}>All users</span>
                                             )}
                                         </td>
-                                        <td className="p-4 text-xs text-gray-500 space-y-0.5">
-                                            {v.minVersion && <div>min: {v.minVersion}</div>}
-                                            {v.maxVersion && <div>max: {v.maxVersion}</div>}
-                                            {v.countries?.length > 0 && (
-                                                <div>{v.countries.join(', ')}</div>
-                                            )}
-                                            {!v.minVersion && !v.maxVersion && !v.countries?.length && (
-                                                <span className="text-gray-300">—</span>
-                                            )}
+                                        <td>
+                                            <div style={{ fontSize: 11.5, color: 'var(--text-3)', lineHeight: 1.7 }}>
+                                                {v.minVersion && <div>min: <code style={{ fontFamily: 'var(--font-mono)' }}>{v.minVersion}</code></div>}
+                                                {v.maxVersion && <div>max: <code style={{ fontFamily: 'var(--font-mono)' }}>{v.maxVersion}</code></div>}
+                                                {v.countries?.length > 0 && <div>{v.countries.join(', ')}</div>}
+                                                {!v.minVersion && !v.maxVersion && !v.countries?.length && (
+                                                    <span style={{ color: 'var(--border-strong)' }}>—</span>
+                                                )}
+                                            </div>
                                         </td>
-                                        <td className="p-4">
-                                            <span
-                                                className={`text-xs px-2 py-1 rounded-full font-medium ${v.isActive
-                                                        ? 'bg-green-50 text-green-700'
-                                                        : 'bg-gray-100 text-gray-500'
-                                                    }`}
-                                            >
-                                                {v.isActive ? 'Active' : 'Inactive'}
+                                        <td>
+                                            <span className={`badge ${v.isActive ? 'badge-green' : 'badge-gray'}`}>
+                                                {v.isActive ? (
+                                                    <>
+                                                        <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--success)', display: 'inline-block' }} />
+                                                        Active
+                                                    </>
+                                                ) : 'Inactive'}
                                             </span>
                                         </td>
-                                        <td className="p-4 text-sm text-gray-500">
-                                            {v.size ? `${(v.size / 1024).toFixed(0)} KB` : '—'}
+                                        <td>
+                                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-3)' }}>
+                                                {v.size ? `${(v.size / 1024).toFixed(0)} KB` : '—'}
+                                            </span>
                                         </td>
-                                        <td className="p-4 text-sm text-gray-500">
+                                        <td style={{ whiteSpace: 'nowrap' }}>
                                             {new Date(v.createdAt).toLocaleDateString()}
                                         </td>
-                                        <td className="p-4">
+                                        <td>
                                             {v.isActive && (
                                                 <select
                                                     value={v.rollout}
                                                     onChange={(e) => handleRolloutChange(v._id, Number(e.target.value))}
-                                                    className="text-xs border rounded px-2 py-1"
+                                                    className="input"
+                                                    style={{ padding: '4px 8px', fontSize: 12, width: 'auto', fontFamily: 'var(--font-sans)' }}
                                                 >
                                                     {[5, 10, 20, 50, 100].map((r) => (
                                                         <option key={r} value={r}>{r}%</option>
@@ -356,7 +471,9 @@ export default function AppDetailPage() {
                         </table>
                     </div>
                 )}
-            </div>
+            </SectionCard>
+
+            <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
         </div>
     );
 }
